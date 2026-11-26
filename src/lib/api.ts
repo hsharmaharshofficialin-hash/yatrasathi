@@ -24,17 +24,36 @@ async function readBody<T>(res: Response): Promise<T> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${apiBase()}${path}`;
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(init?.headers || {}),
-    },
-  });
-  if (!res.ok) throw new ApiError(`Request failed ${res.status}`);
-  return readBody<T>(res);
+  const base = apiBase();
+  try {
+    const url = `${base}${path}`;
+    const res = await fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(init?.headers || {}),
+      },
+    });
+    if (res.ok) return readBody<T>(res);
+  } catch {
+    // If external backend connection fails, automatically retry with Next.js /api route
+    if (base !== "/api") {
+      try {
+        const fallbackUrl = `/api${path}`;
+        const res = await fetch(fallbackUrl, {
+          ...init,
+          headers: {
+            Accept: "application/json",
+            ...(init?.body ? { "Content-Type": "application/json" } : {}),
+            ...(init?.headers || {}),
+          },
+        });
+        if (res.ok) return readBody<T>(res);
+      } catch {}
+    }
+  }
+  throw new ApiError(`Request failed for ${path}`);
 }
 
 function encodeBody(payload: unknown): string {
