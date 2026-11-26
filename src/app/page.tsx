@@ -1,2 +1,5 @@
-﻿import CinematicHome from "@/components/CinematicHome";
-export default function Home() { return <CinematicHome />; }
+import EditorialHome from "@/components/EditorialHome";
+
+export default function Home() {
+  return <EditorialHome />;
+}
